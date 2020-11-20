@@ -1,0 +1,199 @@
+C51 COMPILER V9.01   TEST                                                                  11/19/2020 14:32:53 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TEST
+OBJECT MODULE PLACED IN test.OBJ
+COMPILER INVOKED BY: C:\Tools\Keil C51\C51\BIN\C51.EXE test.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "reg51.h"
+   2          
+   3          //global variables
+   4          code unsigned char table[]=
+   5                                  {0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90};
+   6                                                  //led 7-seg output data 0-9 
+   7          
+   8          unsigned char l_posit=0;        //choose led 7-seg position     
+   9          unsigned char oldkey=0xff;      //push button data (release status)
+  10          
+  11          //Define led 7-seg anot control (on/off):       
+  12          sbit SMG_q = P1^0;      //Led 7-seg 1 anot 
+  13          sbit SMG_b = P1^1;      //Led 7-seg 2 anot
+  14          sbit SMG_s = P1^2;      //Led 7-seg 3 anot
+  15          sbit SMG_g = P1^3;      //Led 7-seg 4 anot
+  16          
+  17          //Buzzer (speaker) connects on P1^5 
+  18          sbit SPK  = P1^5;       //Buzzer on/off
+  19          //Relay connects on P1^4
+  20          sbit JDQ  = P1^4;       //Relay on/off
+  21          
+  22          //Define 6 push buttons on Port P3
+  23          sbit key1 = P3^7;       //Push button 1
+  24          sbit key2 = P3^6;       //Push button 2
+  25          sbit key3 = P3^5;       //Push button 3
+  26          sbit key4 = P3^4;       //Push button 4
+  27          sbit key5 = P3^3;       //Push button 5
+  28          sbit key6 = P3^2;       //Push button 6
+  29                                  
+  30          /***************/
+  31          //Delay 0-65536
+  32          void delay(unsigned int time)   
+  33          {                                                           
+  34   1              while(time--);
+  35   1      }
+  36          /***************/
+  37          /* Display led 7 segment
+  38          Port P0 connects 4 led 7 segment (LED 4*8)
+  39          P0^0->P0^7 = ABCDEFGH
+  40          P1^0->P1^3 = Anot 1->4
+  41          */
+  42          void display(unsigned int da)
+  43          {
+  44   1              P0=0XFF;                        //Port 0 data off
+  45   1              da=da%10000;            //output data for led 7-seg (4-digits)
+  46   1              switch(l_posit){
+  47   2              case 0:         //choose led 7-seg 1
+  48   2                      SMG_q=0;
+  49   2                      SMG_b=1;        
+  50   2                      SMG_s=1;                
+  51   2                      SMG_g=1;
+  52   2                      P0=table[da/1000];      //Chu so hang nghin
+  53   2                      break;
+  54   2              case 1:         //choose led 7-seg 2
+  55   2                      SMG_q=1;
+C51 COMPILER V9.01   TEST                                                                  11/19/2020 14:32:53 PAGE 2   
+
+  56   2                      SMG_b=0;        
+  57   2                      SMG_s=1;                
+  58   2                      SMG_g=1;
+  59   2                      P0=table[da%1000/100]; //Chu so hang tram
+  60   2                      break;
+  61   2              case 2:         //choose led 7-seg 3
+  62   2                      SMG_q=1;
+  63   2                      SMG_b=1;        
+  64   2                      SMG_s=0;                
+  65   2                      SMG_g=1;
+  66   2                      P0=table[da%100/10];  //Chu so hang chuc
+  67   2                      break;
+  68   2              case 3:         //choose led 7-seg 4
+  69   2                      SMG_q=1;
+  70   2                      SMG_b=1;        
+  71   2                      SMG_s=1;                
+  72   2                      SMG_g=0;
+  73   2                      P0=table[da%10];         //Chu so hang don vi
+  74   2                      break;
+  75   2              }
+  76   1              l_posit++;              //turn around
+  77   1              if(l_posit>3)
+  78   1                      l_posit=0;      
+  79   1      }
+  80          //Read buttons 1-> 6 on P3
+  81          unsigned char ReadKey(void)     
+  82          {
+  83   1              unsigned char lkey=0;
+  84   1              if((P3&0xfc)!=0xfc){    //if any buttons pressed
+  85   2      
+  86   2                      SPK=0;                          //turn on buzzer
+  87   2      
+  88   2                      delay(10);                      //delay for buzzer pulse
+  89   2                      if(oldkey!=(P3&0xfc)){//if any buttons pressed
+  90   3                              oldkey=P3&0xfc;         //update buttons values         
+  91   3                              if(key1==0)
+  92   3                                      lkey=1;         //press button 1
+  93   3                              else if(key2==0)
+  94   3                                      lkey=2;         //press button 2
+  95   3                              else if(key3==0)
+  96   3                                      lkey=3;         //press button 3
+  97   3                              else if(key4==0)
+  98   3                                      lkey=4;         //press button 4
+  99   3                              else if(key5==0)
+ 100   3                                      lkey=5;         //press button 5
+ 101   3                              else if(key6==0)
+ 102   3                                      lkey=6;         //press button 6
+ 103   3                      }
+ 104   2              }
+ 105   1              else{
+ 106   2                      oldkey=0xfc;            //default data of buttons port
+ 107   2      
+ 108   2                      SPK=1;                          //turn off buzzer
+ 109   2              }
+ 110   1              return lkey;
+ 111   1      }
+ 112          
+ 113          //Chuong trinh chinh                            
+ 114          void main(void) 
+ 115          {
+ 116   1              unsigned int ldata=1234;                //led-7seg 4 digits data 
+ 117   1              unsigned char i;
+C51 COMPILER V9.01   TEST                                                                  11/19/2020 14:32:53 PAGE 3   
+
+ 118   1                      for(i=0;i<8;i++){
+ 119   2                              P2<<=1;         //shift left all leds           
+ 120   2                              delay(50000);
+ 121   2                      }
+ 122   1                      P2=0xff;                //all LED off
+ 123   1                      
+ 124   1                      P0=0;                   //Port 0 connect LCD
+ 125   1                      SMG_g=0;                //turn on leg 7-seg 4
+ 126   1                      delay(50000);
+ 127   1                      SMG_g=1;                //turn off leg 7-seg 4
+ 128   1      
+ 129   1                      SMG_s=0;                //turn on leg 7-seg 3
+ 130   1                      delay(50000);
+ 131   1                      SMG_s=1;                //turn off leg 7-seg 3
+ 132   1      
+ 133   1                      SMG_b=0;                //turn on leg 7-seg 2
+ 134   1                      delay(50000);
+ 135   1                      SMG_b=1;                //turn off leg 7-seg 2
+ 136   1      
+ 137   1                      SMG_q=0;                //turn on leg 7-seg 1
+ 138   1                      delay(50000);
+ 139   1                      SMG_q=1;                ////turn off leg 7-seg 1
+ 140   1                      
+ 141   1                      SPK=0;                  //buzzer on
+ 142   1                      delay(50000);
+ 143   1                      SPK=1;                  //buzzer off
+ 144   1      
+ 145   1                      JDQ=0;                  //relay on
+ 146   1                      delay(50000);
+ 147   1                      JDQ=1;                  //relay off
+ 148   1              
+ 149   1              while(1){                                       //loop forever
+ 150   2                      
+ 151   2                      //P2 = 0x55;                            //8 leds on Port 2
+ 152   2                      switch(ReadKey()){              //Polling push buttons
+ 153   3                      case 1:ldata++;                 //button 1 pressed
+ 154   3                              break;
+ 155   3                      case 2:ldata--;                 //button 2 pressed
+ 156   3                              break;
+ 157   3                      case 3:ldata+=10;               //button 3 pressed
+ 158   3                              break;
+ 159   3                      case 4:ldata-=10;               //button 4 pressed
+ 160   3                              break;
+ 161   3                      case 5:ldata+=100;              //button 5 pressed
+ 162   3                              break;
+ 163   3                      case 6:ldata-=100;              //button 6 pressed
+ 164   3                              break;
+ 165   3                      }               
+ 166   2                      display(ldata);         //display 4 digits led 7-seg
+ 167   2                      delay(100);
+ 168   2      
+ 169   2              }
+ 170   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    393    ----
+   CONSTANT SIZE    =     10    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V9.01   TEST                                                                  11/19/2020 14:32:53 PAGE 4   
+
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
